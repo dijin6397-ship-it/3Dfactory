@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>上海北翟路车辆段检修库 - 3D 可视化</title>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="canvas-container"></div>
+    <div id="ui-overlay">
+      <div id="controls">
+        <h1>上海北翟路车辆段检修库</h1>
+        <div class="control-group">
+          <button id="btn-reset" class="btn">重置视角</button>
+          <button id="btn-top" class="btn">俯视</button>
+          <button id="btn-side" class="btn">侧视</button>
+        </div>
+        <div class="control-group">
+          <label><input type="checkbox" id="toggle-tracks" checked> 显示股道</label>
+          <label><input type="checkbox" id="toggle-zones" checked> 显示区域</label>
+          <label><input type="checkbox" id="toggle-labels" checked> 显示标签</label>
+          <label><input type="checkbox" id="toggle-floor" checked> 显示地面</label>
+        </div>
+        <div class="info">
+          <p>股道数量: <span id="track-count">20</span></p>
+          <p>工位数量: <span id="station-count">60</span></p>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><span class="color-box" style="background:#4a90d9"></span>股道</div>
+          <div class="legend-item"><span class="color-box" style="background:#f5a623"></span>作业区</div>
+          <div class="legend-item"><span class="color-box" style="background:#7ed321"></span>工位</div>
+          <div class="legend-item"><span class="color-box" style="background:#9b9b9b"></span>设备区</div>
+        </div>
+      </div>
+      <div id="tooltip" class="hidden"></div>
+    </div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

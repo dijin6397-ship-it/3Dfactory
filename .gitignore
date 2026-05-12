@@ -1,0 +1,15 @@
+.venv/
+opencv/
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+ffmpeg-8.1.1.tar.xz
+总体流程.mp4
+转向架.mp4
+.agents/
+.claude/
+.trae/
+skills-lock.json
+*.xlsx
+*.mp4

@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>数字化工厂模型</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;font-family:"Microsoft YaHei","SimHei",sans-serif;background:#0d1117}
+canvas{display:block}
+#topBar{position:fixed;top:0;left:0;width:100%;height:44px;background:rgba(13,17,23,0.95);border-bottom:1px solid rgba(48,54,61,0.6);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:20;backdrop-filter:blur(8px)}
+#topBar .title{font-size:16px;color:#58a6ff;font-weight:bold;letter-spacing:2px}
+#topBar .logo{height:36px;max-width:220px;object-fit:contain}
+#toggleBtn{position:fixed;top:54px;left:4px;z-index:30;background:rgba(13,17,23,0.9);color:#58a6ff;border:1px solid rgba(48,54,61,0.6);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;transition:left .3s}
+#toggleBtn.expanded{left:276px}
+#panelWrap{position:fixed;top:54px;left:0;bottom:0;z-index:10;width:272px;transition:transform .3s ease}
+#panelWrap.collapsed{transform:translateX(-280px)}
+#panel{background:rgba(13,17,23,0.94);color:#c9d1d9;padding:14px;height:100%;overflow-y:auto;border-right:1px solid rgba(48,54,61,0.8);backdrop-filter:blur(8px)}
+#panel::-webkit-scrollbar{width:4px}
+#panel::-webkit-scrollbar-thumb{background:rgba(48,54,61,0.6);border-radius:2px}
+#panel h3{font-size:14px;margin-bottom:10px;color:#58a6ff;text-align:center;border-bottom:1px solid rgba(48,54,61,0.6);padding-bottom:8px}
+.panel-section{margin-bottom:10px}
+.panel-section summary{font-size:12px;color:#8b949e;cursor:pointer;padding:3px 0;user-select:none}
+.panel-section summary:hover{color:#58a6ff}
+.label{font-size:11px;color:#8b949e;margin:2px 0}
+.btn{display:block;width:100%;padding:6px;margin:3px 0;border:1px solid rgba(48,54,61,0.5);background:rgba(22,27,34,0.8);color:#c9d1d9;border-radius:5px;cursor:pointer;font-size:11px;text-align:left}
+.btn:hover{background:rgba(48,54,61,0.6);color:#fff}
+.btn.active{background:rgba(56,139,253,0.15);color:#58a6ff;border-color:rgba(56,139,253,0.4)}
+.input-group{display:flex;gap:4px;margin:4px 0}
+.input-group input,.input-group select{flex:1;padding:5px;background:rgba(22,27,34,0.9);border:1px solid rgba(48,54,61,0.5);color:#c9d1d9;border-radius:4px;font-size:11px}
+.input-group input::placeholder{color:#484f58}
+.add-btn{padding:6px 12px;background:rgba(56,139,253,0.2);color:#58a6ff;border:1px solid rgba(56,139,253,0.4);border-radius:4px;cursor:pointer;font-size:11px;width:100%;margin-top:4px}
+.add-btn:hover{background:rgba(56,139,253,0.3)}
+#tooltip{position:fixed;pointer-events:none;background:rgba(13,17,23,0.96);color:#c9d1d9;padding:8px 12px;border-radius:6px;font-size:12px;display:none;z-index:100;border:1px solid rgba(48,54,61,0.6);max-width:280px}
+#trainList{max-height:200px;overflow-y:auto}
+.train-item{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin:2px 0;background:rgba(22,27,34,0.6);border-radius:4px;font-size:10px}
+.train-item span{color:#8b949e}
+.del-btn{background:none;border:none;color:#f85149;cursor:pointer;font-size:13px;padding:0 4px}
+#legend{position:fixed;bottom:12px;right:12px;background:rgba(13,17,23,0.9);color:#8b949e;padding:10px 12px;border-radius:8px;font-size:10px;z-index:10;border:1px solid rgba(48,54,61,0.6)}
+.legend-item{display:flex;align-items:center;gap:5px;margin:2px 0}
+.legend-color{width:12px;height:8px;border-radius:2px;flex-shrink:0}
+#detailPanel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(13,17,23,0.97);color:#c9d1d9;padding:20px 24px;border-radius:12px;z-index:200;border:1px solid rgba(56,139,253,0.4);min-width:280px;max-width:400px;display:none;box-shadow:0 8px 32px rgba(0,0,0,0.6)}
+#detailPanel h4{color:#58a6ff;font-size:15px;margin-bottom:12px;border-bottom:1px solid rgba(48,54,61,0.6);padding-bottom:8px}
+#detailPanel .info-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(48,54,61,0.3)}
+#detailPanel .info-row .info-label{color:#8b949e}
+#detailPanel .info-row .info-value{color:#e6edf3;font-weight:bold}
+#detailPanel .close-btn{position:absolute;top:8px;right:12px;background:none;border:none;color:#8b949e;cursor:pointer;font-size:18px}
+#detailPanel .close-btn:hover{color:#f85149}
+#overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:199;display:none}
+</style>
+</head>
+<body>
+<div id="topBar">
+  <span class="title">数字化工厂模型</span>
+  <img class="logo" src="图片/logo.jpg" alt="logo">
+</div>
+<button id="toggleBtn" class="expanded" onclick="togglePanel()">☰</button>
+<div id="panelWrap">
+  <div id="panel">
+    <h3>🏭 工厂总览</h3>
+    <details class="panel-section" open>
+      <summary>👁 视图控制</summary>
+      <button class="btn" onclick="setView('top',this)">俯视图</button>
+      <button class="btn" onclick="setView('front',this)">前视图</button>
+      <button class="btn active" onclick="setView('perspective',this)">透视图</button>
+      <button class="btn" onclick="resetCamera()">重置相机</button>
+    </details>
+    <details class="panel-section" open>
+      <summary>📂 图层控制</summary>
+      <button class="btn active" id="lyr_building" onclick="toggleLayer('building',this)">厂房结构</button>
+      <button class="btn active" id="lyr_tracksL" onclick="toggleLayer('tracksL',this)">股道(左)</button>
+      <button class="btn active" id="lyr_tracksR" onclick="toggleLayer('tracksR',this)">股道(右)</button>
+      <button class="btn active" id="lyr_transfer" onclick="toggleLayer('transfer',this)">移车台(30~库8)</button>
+      <button class="btn active" id="lyr_zonesL" onclick="toggleLayer('zonesL',this)">工位(左)</button>
+      <button class="btn active" id="lyr_zonesR" onclick="toggleLayer('zonesR',this)">工位(右)</button>
+      <button class="btn active" id="lyr_trains" onclick="toggleLayer('trains',this)">列车模型</button>
+      <button class="btn active" id="lyr_labels" onclick="toggleLayer('labels',this)">文字标注</button>
+    </details>
+    <details class="panel-section" open>
+      <summary>🚂 车辆管理</summary>
+      <div class="label" style="color:#58a6ff;font-size:10px;margin-bottom:4px">24-29道:左3节+右4节 | 点击1车/8车切换方向</div>
+      <div class="input-group"><input id="carId" placeholder="车号-节号(如201-1)"></div>
+      <div class="input-group"><select id="carTrack"><option value="">选择股道</option></select></div>
+      <button class="add-btn" onclick="addCar()">添加车辆</button>
+      <div id="trainList"></div>
+    </details>
+    <details class="panel-section">
+      <summary>📊 统计信息</summary>
+      <div class="label">左侧工位: <span style="color:#58a6ff">6个</span></div>
+      <div class="label">右侧工位: <span style="color:#58a6ff">6个</span></div>
+      <div class="label">股道(左): <span style="color:#58a6ff">17条</span></div>
+      <div class="label">股道(右): <span style="color:#58a6ff">15条</span></div>
+      <div class="label">移车台范围: <span style="color:#58a6ff">30~库8道</span></div>
+    </details>
+    <div style="margin-top:8px;font-size:10px;color:#484f58;text-align:center">点击工位查看详情 | 点击1车/8车切换方向 | 滚轮缩放 | 右键旋转</div>
+  </div>
+</div>
+<div id="tooltip"></div>
+<div id="overlay" onclick="closeDetail()"></div>
+<div id="detailPanel">
+  <button class="close-btn" onclick="closeDetail()">✕</button>
+  <h4 id="detailTitle"></h4>
+  <div id="detailContent"></div>
+</div>
+<div id="legend">
+  <div class="legend-item"><div class="legend-color" style="background:#4caf50"></div>有电调试道</div>
+  <div class="legend-item"><div class="legend-color" style="background:#e8a030"></div>无电调试道</div>
+  <div class="legend-item"><div class="legend-color" style="background:#ef5350"></div>临修工位</div>
+  <div class="legend-item"><div class="legend-color" style="background:#2e7d32"></div>绿色通道</div>
+  <div class="legend-item"><div class="legend-color" style="background:#5c4033"></div>起车道/存车线</div>
+  <div class="legend-item"><div class="legend-color" style="background:#00897b"></div>移车台</div>
+  <div class="legend-item"><div class="legend-color" style="background:#1565c0"></div>左侧工位区</div>
+  <div class="legend-item"><div class="legend-color" style="background:#c62828"></div>右侧工位区</div>
+</div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import*as THREE from'three';
+import{OrbitControls}from'three/addons/controls/OrbitControls.js';
+
+const LW=20,MW=4,RW=20,FW=LW+MW+RW;
+const TS=2.5;
+const L_TRACK_COUNT=17;
+const R_TRACK_COUNT=15;
+
+function trackZ(idx,count){
+  return((count-1)/2-idx)*TS;
+}
+
+const L_tracks=[
+  {id:"24",label:"有电调试道1",maxCars:3,idx:0,color:0x4caf50,side:'left'},
+  {id:"25",label:"有电调试道2",maxCars:3,idx:1,color:0x4caf50,side:'left'},
+  {id:"26",label:"有电调试道3",maxCars:3,idx:2,color:0x4caf50,side:'left'},
+  {id:"27",label:"无电调试道1",maxCars:3,idx:3,color:0xe8a030,side:'left'},
+  {id:"28",label:"无电调试道2",maxCars:3,idx:4,color:0xe8a030,side:'left'},
+  {id:"29",label:"临修道",maxCars:3,idx:5,color:0xef5350,side:'left'},
+  {id:"30",label:"起车道",maxCars:3,idx:6,color:0x5c4033,side:'left'},
+  {id:"31",label:"起车道",maxCars:3,idx:7,color:0x5c4033,side:'left'},
+  {id:"32",label:"存车线",maxCars:3,idx:8,color:0x5c4033,side:'left'},
+  {id:"库1",label:"存车线",maxCars:3,idx:9,color:0x5c4033,side:'left'},
+  {id:"库2",label:"存车线",maxCars:3,idx:10,color:0x5c4033,side:'left'},
+  {id:"库3",label:"存车线",maxCars:3,idx:11,color:0x5c4033,side:'left'},
+  {id:"库4",label:"存车线",maxCars:3,idx:12,color:0x5c4033,side:'left'},
+  {id:"库5",label:"存车线",maxCars:3,idx:13,color:0x5c4033,side:'left'},
+  {id:"库6",label:"存车线",maxCars:3,idx:14,color:0x5c4033,side:'left'},
+  {id:"库7",label:"存车线",maxCars:3,idx:15,color:0x5c4033,side:'left'},
+  {id:"库8",label:"存车线",maxCars:3,idx:16,color:0x5c4033,side:'left'}
+];
+
+L_tracks.forEach(t=>{t.z=trackZ(t.idx,L_TRACK_COUNT);});
+
+const R_tracks=[
+  {id:"24",label:"有电调试道1",maxCars:4,idx:0,color:0x4caf50,side:'right'},
+  {id:"25",label:"有电调试道2",maxCars:4,idx:1,color:0x4caf50,side:'right'},
+  {id:"26",label:"有电调试道3",maxCars:4,idx:2,color:0x4caf50,side:'right'},
+  {id:"27",label:"无电调试道1",maxCars:4,idx:3,color:0xe8a030,side:'right'},
+  {id:"28",label:"无电调试道2",maxCars:4,idx:4,color:0xe8a030,side:'right'},
+  {id:"29",label:"绿色通道",maxCars:4,idx:5,color:0x2e7d32,side:'right'},
+  {id:"转1",label:"转向架",maxCars:4,idx:6,color:0xc62828,side:'right'},
+  {id:"转2",label:"转向架",maxCars:4,idx:7,color:0xc62828,side:'right'},
+  {id:"轮对",label:"轮对",maxCars:4,idx:8,color:0xd32f2f,side:'right'},
+  {id:"缓1",label:"落车",maxCars:4,idx:9,color:0xe53935,side:'right'},
+  {id:"缓2",label:"落车",maxCars:4,idx:10,color:0xe53935,side:'right'},
+  {id:"延1",label:"上体4",maxCars:4,idx:11,color:0xef5350,side:'right'},
+  {id:"延2",label:"上体4",maxCars:4,idx:12,color:0xef5350,side:'right'},
+  {id:"吹扫",label:"吹扫间",maxCars:4,idx:13,color:0xff5722,side:'right'},
+  {id:"油漆",label:"油漆间",maxCars:4,idx:14,color:0xff5722,side:'right'}
+];
+
+const L_sharedZ={};
+L_tracks.slice(0,6).forEach(t=>{L_sharedZ[t.id]=t.z;});
+R_tracks.forEach(t=>{
+  if(L_sharedZ[t.id]!==undefined){
+    t.z=L_sharedZ[t.id];
+  }else{
+    t.z=trackZ(t.idx,R_TRACK_COUNT);
+  }
+});
+
+const L_trackMap={};
+L_tracks.forEach(t=>{L_trackMap[t.id]=t.z;});
+const R_trackMap={};
+R_tracks.forEach(t=>{R_trackMap[t.id]=t.z;});
+
+const D_leftZones=[
+  {label:"接车工位",tracks:[0],color:0x0d47a1},
+  {label:"调试工位",tracks:[1,2],color:0x1565c0},
+  {label:"起车工位",tracks:[3,4,5,6,7,8],color:0x1976d2},
+  {label:"上体检修工位1",tracks:[9,10,11],color:0x1e88e5},
+  {label:"上体检修工位2",tracks:[12,13,14],color:0x2196f3},
+  {label:"上体检修工位3",tracks:[15,16],color:0x42a5f5}
+];
+
+const D_rightZones=[
+  {label:"转向架工位",tracks:[6,7],color:0xb71c1c},
+  {label:"轮对工位",tracks:[8],color:0xc62828},
+  {label:"落车工位",tracks:[9,10],color:0xd32f2f},
+  {label:"上体检修工位4",tracks:[11,12],color:0xe53935},
+  {label:"吹扫间",tracks:[13],color:0xef5350},
+  {label:"油漆间",tracks:[14],color:0xff5722}
+];
+
+const leftZones=D_leftZones.map(z=>{
+  const tz=z.tracks.map(i=>L_tracks[i].z);
+  return{...z,zCenter:(Math.max(...tz)+Math.min(...tz))/2,depth:Math.abs(tz[0]-tz[tz.length-1])+TS};
+});
+const rightZones=D_rightZones.map(z=>{
+  const tz=z.tracks.map(i=>R_tracks[i].z);
+  return{...z,zCenter:(Math.max(...tz)+Math.min(...tz))/2,depth:Math.abs(tz[0]-tz[tz.length-1])+TS};
+});
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.2;
+document.body.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0d1117);
+scene.fog=new THREE.FogExp2(0x0d1117,0.003);
+
+const camera=new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,0.1,200);
+camera.position.set(0,55,45);
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.dampingFactor=0.08;
+controls.target.set(0,0,0);
+controls.maxPolarAngle=Math.PI*0.48;
+controls.minDistance=10;
+controls.maxDistance=130;
+
+scene.add(new THREE.AmbientLight(0xffffff,0.65));
+const dl=new THREE.DirectionalLight(0xffffff,0.9);
+dl.position.set(20,40,15);
+dl.castShadow=true;
+dl.shadow.mapSize.set(4096,4096);
+dl.shadow.camera.left=-50;dl.shadow.camera.right=50;
+dl.shadow.camera.top=40;dl.shadow.camera.bottom=-40;
+scene.add(dl);
+scene.add(new THREE.HemisphereLight(0x87ceeb,0x362a28,0.35));
+
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+const tooltip=document.getElementById('tooltip');
+const layers={};
+const iMeshes=[];
+
+function ensureGroup(n){
+  if(!layers[n]){const g=new THREE.Group();g.name=n;scene.add(g);layers[n]=g;}
+  return layers[n];
+}
+
+function mkLabel(text,color,fontSize){
+  const c=document.createElement('canvas');
+  const ctx=c.getContext('2d');
+  const s=4;
+  const fs=fontSize*s;
+  const lines=text.split('\n');
+  ctx.font='bold '+fs+'px "Microsoft YaHei","SimHei",sans-serif';
+  let mw=0;
+  lines.forEach(l=>{const m=ctx.measureText(l);if(m.width>mw)mw=m.width;});
+  const lh=fs*1.3;
+  c.width=Math.ceil(mw+12*s);
+  c.height=Math.ceil(lines.length*lh+6*s);
+  ctx.font='bold '+fs+'px "Microsoft YaHei","SimHei",sans-serif';
+  ctx.fillStyle=color||'#ffffff';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  const cx=c.width/2,cy=c.height/2;
+  lines.forEach((l,i)=>{
+    ctx.fillText(l,cx,cy+(i-(lines.length-1)/2)*lh);
+  });
+  const tex=new THREE.CanvasTexture(c);
+  tex.minFilter=THREE.LinearFilter;
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false});
+  const sp=new THREE.Sprite(mat);
+  const sc=Math.min(c.width/(s*10),c.height/(s*5));
+  sp.scale.set(sc,sc*(c.height/c.width),1);
+  return sp;
+}
+
+function addLabel(g,text,pos,color,fontSize){
+  const sp=mkLabel(text,color||'#ffffff',fontSize||12);
+  sp.position.copy(pos);
+  g.add(sp);
+  sp.userData.layer='labels';
+  iMeshes.push(sp);
+  return sp;
+}
+
+const bg=ensureGroup('building');
+const zHalf=L_TRACK_COUNT*TS/2+2;
+const ground=new THREE.Mesh(
+  new THREE.BoxGeometry(FW+6,0.3,zHalf*2),
+  new THREE.MeshStandardMaterial({color:0x151a28,roughness:0.95})
+);
+ground.position.set(0,-0.15,0);
+ground.receiveShadow=true;
+bg.add(ground);
+
+const gridHelper=new THREE.GridHelper(FW+6,70,0x1a2233,0x1a2233);
+gridHelper.position.y=0.01;
+bg.add(gridHelper);
+
+const wallMat=new THREE.MeshStandardMaterial({color:0x2a3040,roughness:0.8,transparent:true,opacity:0.12});
+const wallH=2.5;
+[[-FW/2-3,0,0,0.2],[FW/2+3,0,0,0.2],[0,0,zHalf,FW+6],[0,0,-zHalf,FW+6]].forEach(([x,_,z,w])=>{
+  const isX=w>2;
+  const m=new THREE.Mesh(new THREE.BoxGeometry(isX?w:0.15,wallH,isX?0.15:zHalf*2),wallMat);
+  m.position.set(x,wallH/2,z);
+  bg.add(m);
+});
+
+const leftX=-(MW/2+LW/2);
+const rightX=MW/2+RW/2;
+
+const zgL=ensureGroup('zonesL');
+const zgR=ensureGroup('zonesR');
+
+function addZoneBlock(z,xPos,w,labelColor,labelSize){
+  const g=new THREE.Group();
+  const base=new THREE.Mesh(
+    new THREE.BoxGeometry(w,0.1,z.depth-0.1),
+    new THREE.MeshStandardMaterial({color:z.color,roughness:0.55,metalness:0.05,transparent:true,opacity:0.82})
+  );
+  base.position.set(0,0.05,0);
+  base.receiveShadow=true;
+  g.add(base);
+  const h=0.7;
+  const edge=new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(w,h,z.depth-0.1)),
+    new THREE.LineBasicMaterial({color:z.color,transparent:true,opacity:0.5})
+  );
+  edge.position.y=h/2;
+  g.add(edge);
+  const body=new THREE.Mesh(
+    new THREE.BoxGeometry(w,h-0.1,z.depth-0.1),
+    new THREE.MeshStandardMaterial({color:z.color,roughness:0.6,transparent:true,opacity:0.15})
+  );
+  body.position.y=h/2+0.05;
+  g.add(body);
+  g.position.set(xPos,0,z.zCenter);
+  g.userData={type:'zone',label:z.label,zData:z};
+  iMeshes.push(base);
+  base.userData={type:'zone',label:z.label,zData:z};
+  addLabel(g,z.label,new THREE.Vector3(0,h+0.4,0),labelColor||'#ffffff',labelSize||8);
+  return g;
+}
+
+leftZones.forEach(z=>addZoneBlock(z,leftX,LW,'#bbdefb',8));
+rightZones.forEach(z=>addZoneBlock(z,rightX,RW,'#ffcdd2',8));
+
+const ttg=ensureGroup('transfer');
+const ttZMax=L_tracks[6].z+TS/2;
+const ttZMin=L_tracks[16].z-TS/2;
+const ttDepth=ttZMax-ttZMin;
+const tt=new THREE.Mesh(
+  new THREE.BoxGeometry(MW,0.12,ttDepth),
+  new THREE.MeshStandardMaterial({color:0x00897b,roughness:0.5,metalness:0.2,transparent:true,opacity:0.6})
+);
+tt.position.set(0,0.06,(ttZMax+ttZMin)/2);
+tt.receiveShadow=true;
+ttg.add(tt);
+const ttEdge=new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(MW,0.6,ttDepth)),
+  new THREE.LineBasicMaterial({color:0x00897b,transparent:true,opacity:0.5})
+);
+ttEdge.position.set(0,0.3,(ttZMax+ttZMin)/2);
+ttg.add(ttEdge);
+addLabel(ttg,'移车台(30~库8道)',new THREE.Vector3(0,0.9,(ttZMax+ttZMin)/2),'#4dd0e1',9);
+
+const tgL=ensureGroup('tracksL');
+const tgR=ensureGroup('tracksR');
+
+const L_sharedIds=["24","25","26","27","28","29"];
+
+L_tracks.forEach(t=>{
+  const isShared=L_sharedIds.includes(t.id);
+  const tw=isShared?FW:LW;
+  const cx=isShared?0:leftX;
+  const trackMat=new THREE.MeshStandardMaterial({color:t.color,roughness:0.7,transparent:true,opacity:0.15});
+  const zone=new THREE.Mesh(new THREE.BoxGeometry(tw,0.06,1.0),trackMat);
+  zone.position.set(cx,0.03,t.z);
+  tgL.add(zone);
+
+  const railMat=new THREE.MeshStandardMaterial({color:0x999999,roughness:0.3,metalness:0.6});
+  const r1=new THREE.Mesh(new THREE.BoxGeometry(tw,0.06,0.06),railMat);
+  r1.position.set(cx,0.08,t.z-0.18);
+  tgL.add(r1);
+  const r2=new THREE.Mesh(new THREE.BoxGeometry(tw,0.06,0.06),railMat);
+  r2.position.set(cx,0.08,t.z+0.18);
+  tgL.add(r2);
+
+  const tieMat=new THREE.MeshStandardMaterial({color:0x555555,roughness:0.8});
+  for(let x=cx-tw/2+1;x<=cx+tw/2-1;x+=1.5){
+    const s=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.03,0.4),tieMat);
+    s.position.set(x,0.04,t.z);
+    tgL.add(s);
+  }
+
+  if(isShared){
+    const lc=t.color===0x4caf50?'#66bb6a':t.color===0xe8a030?'#ffcc66':'#8d6e63';
+    addLabel(tgL,t.id+'道 '+t.label,new THREE.Vector3(-FW/2+3,0.6,t.z),lc,7);
+  }else{
+    addLabel(tgL,t.id+'道 '+t.label,new THREE.Vector3(leftX-tw/2+2.5,0.6,t.z),'#8d6e63',7);
+  }
+});
+
+R_tracks.forEach(t=>{
+  const isShared=L_sharedIds.includes(t.id);
+  if(isShared){
+    const labelText=t.id+'道 '+t.label;
+    const lc=t.color===0x4caf50?'#66bb6a':t.color===0xe8a030?'#ffcc66':'#ffcdd2';
+    addLabel(tgR,labelText,new THREE.Vector3(FW/2-3,0.6,t.z),lc,7);
+    return;
+  }
+
+  const trackMat=new THREE.MeshStandardMaterial({color:t.color,roughness:0.7,transparent:true,opacity:0.15});
+  const zone=new THREE.Mesh(new THREE.BoxGeometry(RW,0.06,1.0),trackMat);
+  zone.position.set(rightX,0.03,t.z);
+  tgR.add(zone);
+
+  const railMat=new THREE.MeshStandardMaterial({color:0x999999,roughness:0.3,metalness:0.6});
+  const r1=new THREE.Mesh(new THREE.BoxGeometry(RW,0.06,0.06),railMat);
+  r1.position.set(rightX,0.08,t.z-0.18);
+  tgR.add(r1);
+  const r2=new THREE.Mesh(new THREE.BoxGeometry(RW,0.06,0.06),railMat);
+  r2.position.set(rightX,0.08,t.z+0.18);
+  tgR.add(r2);
+
+  const tieMat=new THREE.MeshStandardMaterial({color:0x555555,roughness:0.8});
+  for(let x=-RW/2+1;x<=RW/2-1;x+=1.5){
+    const s=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.03,0.4),tieMat);
+    s.position.set(rightX+x,0.04,t.z);
+    tgR.add(s);
+  }
+
+  const labelText=t.id+'道 '+t.label;
+  const lc=t.color===0x4caf50?'#66bb6a':t.color===0xe8a030?'#ffcc66':'#ffcdd2';
+  if(t.label!=='吹扫间'&&t.label!=='油漆间'){
+    addLabel(tgR,labelText,new THREE.Vector3(FW/2-3,0.6,t.z),lc,7);
+  }
+});
+
+const carTextures={};
+const texLoader=new THREE.TextureLoader();
+for(let i=1;i<=8;i++){
+  const tex=texLoader.load('图片/'+i+'车.jpg');
+  tex.minFilter=THREE.LinearFilter;
+  tex.magFilter=THREE.LinearFilter;
+  carTextures[i]=tex;
+}
+
+const carColorPalette=[0x2196f3,0xe53935,0x43a047,0xfb8c00,0x8e24aa,0x00acc1,0xd81b60,0x00897b];
+const carFlippedMap={};
+
+const trainsG=ensureGroup('trains');
+const carMap={};
+
+function mkTrainCar3D(carType){
+  const g=new THREE.Group();
+  const cw=1.6, ch=0.5, cd=0.5;
+  const carTex=carTextures[carType];
+  const accentColor=new THREE.Color(carColorPalette[(carType-1)%carColorPalette.length]);
+
+  const bodyShape=new THREE.Shape();
+  const rr=0.06;
+  bodyShape.moveTo(-cw/2+rr,-cd/2);
+  bodyShape.lineTo(cw/2-rr,-cd/2);
+  bodyShape.quadraticCurveTo(cw/2,-cd/2,cw/2,-cd/2+rr);
+  bodyShape.lineTo(cw/2,cd/2-rr);
+  bodyShape.quadraticCurveTo(cw/2,cd/2,cw/2-rr,cd/2);
+  bodyShape.lineTo(-cw/2+rr,cd/2);
+  bodyShape.quadraticCurveTo(-cw/2,cd/2,-cw/2,cd/2-rr);
+  bodyShape.lineTo(-cw/2,-cd/2+rr);
+  bodyShape.quadraticCurveTo(-cw/2,-cd/2,-cw/2+rr,-cd/2);
+
+  const bodyGeo=new THREE.ExtrudeGeometry(bodyShape,{depth:ch,bevelEnabled:true,bevelThickness:0.02,bevelSize:0.02,bevelSegments:2});
+  bodyGeo.rotateX(-Math.PI/2);
+  bodyGeo.translate(0,ch/2,0);
+
+  const bodyMat=new THREE.MeshStandardMaterial({color:0xe8e8e8,roughness:0.3,metalness:0.15});
+  if(carTex){
+    bodyMat.map=carTex;
+    bodyMat.color=new THREE.Color(0xffffff);
+  }
+  const body=new THREE.Mesh(bodyGeo,bodyMat);
+  body.position.y=0.1;
+  body.castShadow=true;
+  body.receiveShadow=true;
+  g.add(body);
+
+  const stripe=new THREE.Mesh(
+    new THREE.BoxGeometry(cw-0.02,0.06,cd+0.02),
+    new THREE.MeshStandardMaterial({color:accentColor,roughness:0.35,metalness:0.3})
+  );
+  stripe.position.y=0.14;
+  g.add(stripe);
+
+  const roofGeo=new THREE.BoxGeometry(cw-0.1,0.05,cd-0.08);
+  const roof=new THREE.Mesh(roofGeo,new THREE.MeshStandardMaterial({color:0xbbbbbb,roughness:0.4,metalness:0.2}));
+  roof.position.y=ch+0.14;
+  g.add(roof);
+
+  const winMat=new THREE.MeshStandardMaterial({color:0x263238,roughness:0.15,metalness:0.6,transparent:true,opacity:0.85});
+  for(let s=-1;s<=1;s+=2){
+    for(let wi=-4;wi<=4;wi++){
+      const wx=wi*0.15;
+      if(Math.abs(wx)<0.25)continue;
+      const win=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.14,0.015),winMat);
+      win.position.set(wx,ch/2+0.14,s*(cd/2+0.008));
+      g.add(win);
+    }
+    const doorLeft=new THREE.Mesh(
+      new THREE.BoxGeometry(0.18,0.3,0.015),
+      new THREE.MeshStandardMaterial({color:0x90a4ae,roughness:0.25,metalness:0.4})
+    );
+    doorLeft.position.set(-0.5,ch/2+0.08,s*(cd/2+0.008));
+    g.add(doorLeft);
+    const doorRight=new THREE.Mesh(
+      new THREE.BoxGeometry(0.18,0.3,0.015),
+      new THREE.MeshStandardMaterial({color:0x90a4ae,roughness:0.25,metalness:0.4})
+    );
+    doorRight.position.set(0.5,ch/2+0.08,s*(cd/2+0.008));
+    g.add(doorRight);
+  }
+
+  const bogieMat=new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:0.25,metalness:0.75});
+  for(let bi=-1;bi<=1;bi+=2){
+    const bogie=new THREE.Group();
+    const frame=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.035,0.35),bogieMat);
+    bogie.add(frame);
+    const crossBeam=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.025,0.04),bogieMat);
+    crossBeam.position.y=-0.01;
+    bogie.add(crossBeam);
+    for(let ws=-1;ws<=1;ws+=2){
+      const axle=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.06,12),bogieMat);
+      axle.rotation.z=Math.PI/2;
+      axle.position.set(-0.1,0,ws*0.13);
+      bogie.add(axle);
+      const axle2=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.06,12),bogieMat);
+      axle2.rotation.z=Math.PI/2;
+      axle2.position.set(0.1,0,ws*0.13);
+      bogie.add(axle2);
+      const wheelL=new THREE.Mesh(new THREE.CylinderGeometry(0.065,0.065,0.025,16),bogieMat);
+      wheelL.rotation.z=Math.PI/2;
+      wheelL.position.set(-0.1,0,ws*0.13+0.04);
+      bogie.add(wheelL);
+      const wheelR=new THREE.Mesh(new THREE.CylinderGeometry(0.065,0.065,0.025,16),bogieMat);
+      wheelR.rotation.z=Math.PI/2;
+      wheelR.position.set(0.1,0,ws*0.13-0.04);
+      bogie.add(wheelR);
+    }
+    bogie.position.set(bi*0.4,0.05,0);
+    g.add(bogie);
+  }
+
+  const coupleMat=new THREE.MeshStandardMaterial({color:0x555555,roughness:0.3,metalness:0.6});
+  for(let end=-1;end<=1;end+=2){
+    const coupleBase=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.14),coupleMat);
+    coupleBase.position.set(end*(cw/2+0.04),0.1,0);
+    g.add(coupleBase);
+    const coupleHead=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.08,0.06),coupleMat);
+    coupleHead.position.set(end*(cw/2+0.08),0.1,0);
+    g.add(coupleHead);
+  }
+
+  const headlightMat=new THREE.MeshStandardMaterial({color:0xfff176,emissive:0xfff176,emissiveIntensity:0.6,roughness:0.2});
+  const headlightL=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.05),headlightMat);
+  headlightL.position.set(-cw/2-0.01,0.18,0.15);
+  g.add(headlightL);
+  const headlightR=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.05),headlightMat);
+  headlightR.position.set(-cw/2-0.01,0.18,-0.15);
+  g.add(headlightR);
+
+  const taillightMat=new THREE.MeshStandardMaterial({color:0xff1744,emissive:0xff1744,emissiveIntensity:0.4,roughness:0.2});
+  const taillightL=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.05),taillightMat);
+  taillightL.position.set(cw/2+0.01,0.18,0.15);
+  g.add(taillightL);
+  const taillightR=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.05),taillightMat);
+  taillightR.position.set(cw/2+0.01,0.18,-0.15);
+  g.add(taillightR);
+
+  g.scale.set(0.9,0.9,0.9);
+  return g;
+}
+
+function rebuildAllCars(){
+  Object.keys(carMap).forEach(k=>{
+    if(carMap[k]){trainsG.remove(carMap[k]);delete carMap[k];}
+  });
+  allCars.forEach(c=>addCarToScene(c));
+}
+
+function addCarToScene(car){
+  const key=car.id;
+  if(carMap[key]){trainsG.remove(carMap[key]);delete carMap[key];}
+
+  const idParts=key.split('-');
+  const carType=parseInt(idParts[idParts.length-1])||1;
+  const trackId=car.track;
+  const isLeftTrack=L_trackMap[trackId]!==undefined;
+  const isRightTrack=R_trackMap[trackId]!==undefined;
+
+  if(!isLeftTrack&&!isRightTrack)return;
+
+  const shared=L_sharedIds.includes(trackId);
+  const trainCar=mkTrainCar3D(Math.min(Math.max(carType,1),8));
+
+  if(shared){
+    const colIdx=carType;
+    let xPos;
+    if(colIdx<=3){
+      const localIdx=colIdx-1;
+      const spacing=1.6;
+      const startX=-(MW/2+LW/2)-0.5;
+      xPos=startX+localIdx*spacing;
+    }else{
+      const localIdx=colIdx-4;
+      const spacing=1.6;
+      const startX=(MW/2)+0.5;
+      xPos=startX+localIdx*spacing;
+    }
+    const zVal=isLeftTrack?L_trackMap[trackId]:(R_trackMap[trackId]||L_trackMap[trackId]);
+    trainCar.position.set(xPos,0.5,zVal);
+  }else if(isLeftTrack){
+    const leftCarsOnTrack=allCars.filter(c=>c.track===trackId&&L_trackMap[c.track]!==undefined);
+    const idx=leftCarsOnTrack.indexOf(car);
+    const spacing=1.6;
+    const startX=-(LW/2)+1.5;
+    const xPos=startX+idx*spacing;
+    trainCar.position.set(xPos,0.5,L_trackMap[trackId]);
+  }else{
+    const rightCarsOnTrack=allCars.filter(c=>c.track===trackId&&R_trackMap[c.track]!==undefined);
+    const idx=rightCarsOnTrack.indexOf(car);
+    const spacing=1.6;
+    const startX=rightX-(RW/2)+1.5;
+    const xPos=startX+idx*spacing;
+    trainCar.position.set(xPos,0.5,R_trackMap[trackId]);
+  }
+
+  if(carFlippedMap[key]&&(carType===1||carType===8)){
+    trainCar.rotation.y=Math.PI;
+  }
+
+  const fullLabel=car.id+' -> '+trackId+'道';
+  trainCar.userData={type:'car',label:fullLabel,carId:key,carType:carType};
+  trainCar.traverse(child=>{
+    if(child.isMesh){
+      child.userData={type:'car',label:fullLabel,carId:key,carType:carType};
+      iMeshes.push(child);
+    }
+  });
+  trainsG.add(trainCar);
+  carMap[key]=trainCar;
+}
+
+function removeCarFromScene(id){
+  if(carMap[id]){
+    carMap[id].traverse(child=>{if(child.isMesh){const idx=iMeshes.indexOf(child);if(idx>=0)iMeshes.splice(idx,1);}});
+    trainsG.remove(carMap[id]);
+    delete carMap[id];
+  }
+}
+
+const defaultCars=[];
+const sharedTracks=["24","25","26","27","28","29"];
+const leftAbove=["30","31","32","库1","库2","库3","库4","库5","库6","库7","库8"];
+const rightAbove=["转1","转2","轮对","缓1","缓2","延1","延2","吹扫","油漆"];
+
+sharedTracks.forEach(tid=>{
+  for(let s=1;s<=7;s++){
+    defaultCars.push({id:''+tid+'_'+s+'-'+s,track:tid});
+  }
+});
+leftAbove.forEach(tid=>{
+  for(let s=1;s<=3;s++){
+    defaultCars.push({id:'L'+tid+'_'+s+'-'+s,track:tid});
+  }
+});
+rightAbove.forEach(tid=>{
+  for(let s=1;s<=4;s++){
+    defaultCars.push({id:'R'+tid+'_'+s+'-'+s,track:tid});
+  }
+});
+
+let allCars=JSON.parse(localStorage.getItem('factory_cars_v5')||'null');
+if(!allCars||!allCars.length){allCars=defaultCars;}
+
+allCars.forEach(c=>addCarToScene(c));
+renderCarList();
+
+const trackSelect=document.getElementById('carTrack');
+const allTrackOptions=[...L_tracks,...R_tracks];
+const seenIds=new Set();
+allTrackOptions.forEach(t=>{
+  if(seenIds.has(t.id))return;
+  seenIds.add(t.id);
+  const o=document.createElement('option');
+  o.value=t.id;
+  o.textContent=t.id+'道 '+t.label;
+  trackSelect.appendChild(o);
+});
+
+window.addCar=function(){
+  const id=document.getElementById('carId').value.trim();
+  const track=document.getElementById('carTrack').value;
+  if(!id||!track){alert('请输入车号-节号并选择股道');return;}
+  const existing=allCars.findIndex(c=>c.id===id);
+  const car={id:id,track:track};
+  if(existing>=0)allCars[existing]=car;else allCars.push(car);
+  localStorage.setItem('factory_cars_v5',JSON.stringify(allCars));
+  rebuildAllCars();
+  renderCarList();
+  document.getElementById('carId').value='';
+};
+
+window.removeCar=function(id){
+  allCars=allCars.filter(c=>c.id!==id);
+  localStorage.setItem('factory_cars_v5',JSON.stringify(allCars));
+  removeCarFromScene(id);
+  renderCarList();
+};
+
+function toggleCarDirection(carId){
+  carFlippedMap[carId]=!carFlippedMap[carId];
+  const trainCar=carMap[carId];
+  if(!trainCar)return;
+  const car=trainCar.userData.carType;
+  if(car===1||car===8){
+    trainCar.rotation.y=carFlippedMap[carId]?Math.PI:0;
+  }
+}
+
+function renderCarList(){
+  const el=document.getElementById('trainList');
+  const grouped={};
+  allCars.forEach(c=>{
+    if(!grouped[c.track])grouped[c.track]=[];
+    grouped[c.track].push(c);
+  });
+  let html='';
+  const sortedKeys=Object.keys(grouped).sort((a,b)=>{
+    const idxA=L_tracks.find(t=>t.id===a);
+    const idxB=L_tracks.find(t=>t.id===b);
+    return (idxA?idxA.idx:99)-(idxB?idxB.idx:99);
+  });
+  sortedKeys.forEach(track=>{
+    html+='<div style="font-size:10px;color:#58a6ff;margin:4px 0 2px">'+track+'道 ('+grouped[track].length+'节):</div>';
+    grouped[track].forEach(c=>{
+      const isFlip=carFlippedMap[c.id];
+      const dirIcon=(c.id.endsWith('-1')||c.id.endsWith('-8'))?'<button class="del-btn" style="color:#58a6ff" onclick="toggleCarDir(\''+c.id+'\')" title="切换方向">'+(isFlip?'⬅':'➡')+'</button>':'';
+      html+='<div class="train-item"><span>'+c.id+'</span>'+dirIcon+'<button class="del-btn" onclick="removeCar(\''+c.id+'\')">&#10005;</button></div>';
+    });
+  });
+  el.innerHTML=html;
+}
+
+window.toggleCarDir=function(carId){
+  toggleCarDirection(carId);
+  renderCarList();
+};
+
+function showDetail(zData){
+  const dp=document.getElementById('detailPanel');
+  const dt=document.getElementById('detailTitle');
+  const dc=document.getElementById('detailContent');
+  const colorHex='#'+zData.color.toString(16).padStart(6,'0');
+  dt.innerHTML='<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:'+colorHex+';vertical-align:middle;margin-right:6px"></span>'+zData.label;
+  const trackNames=zData.tracks?zData.tracks.map(i=>{
+    const lt=L_tracks[i];
+    const rt=R_tracks[i];
+    return lt?lt.id+'道':(rt?rt.id+'道':'');
+  }).filter(Boolean).join('、'):(zData.label||'');
+  dc.innerHTML='<div class="info-row"><span class="info-label">工位名称</span><span class="info-value">'+zData.label+'</span></div>'
+    +(trackNames?'<div class="info-row"><span class="info-label">覆盖股道</span><span class="info-value">'+trackNames+'</span></div>':'');
+  dp.style.display='block';
+  document.getElementById('overlay').style.display='block';
+}
+
+window.closeDetail=function(){
+  document.getElementById('detailPanel').style.display='none';
+  document.getElementById('overlay').style.display='none';
+};
+
+window.setView=function(v,btn){
+  document.querySelectorAll('.panel-section .btn').forEach(function(b){b.classList.remove('active')});
+  if(btn)btn.classList.add('active');
+  if(v==='top'){camera.position.set(0,70,0);controls.target.set(0,0,0);}
+  else if(v==='front'){camera.position.set(0,20,55);controls.target.set(0,0,0);}
+  else{camera.position.set(0,55,45);controls.target.set(0,0,0);}
+  controls.update();
+};
+
+window.resetCamera=function(){camera.position.set(0,55,45);controls.target.set(0,0,0);controls.update();};
+window.toggleLayer=function(n,btn){const g=layers[n];if(g){g.visible=!g.visible;btn.classList.toggle('active');}};
+
+window.togglePanel=function(){
+  const p=document.getElementById('panelWrap');
+  const b=document.getElementById('toggleBtn');
+  p.classList.toggle('collapsed');
+  b.classList.toggle('expanded');
+};
+
+function onMM(e){
+  mouse.x=(e.clientX/window.innerWidth)*2-1;
+  mouse.y=-(e.clientY/window.innerHeight)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(iMeshes,true);
+  if(hits.length>0){
+    let obj=hits[0].object;
+    while(obj&&!obj.userData.label)obj=obj.parent;
+    if(obj&&obj.userData.label){
+      tooltip.style.display='block';
+      tooltip.style.left=(e.clientX+12)+'px';
+      tooltip.style.top=(e.clientY+12)+'px';
+      const zD=obj.userData.zData;
+      let html='<div style="color:#58a6ff;font-weight:bold;margin-bottom:3px">'+obj.userData.label+'</div>';
+      if(zD){html+='<div style="color:#8b949e;font-size:10px">点击查看详情</div>';}
+      if(obj.userData.type==='car'){
+        const ct=obj.userData.carType;
+        if(ct===1||ct===8){
+          const flipped=carFlippedMap[obj.userData.carId];
+          html+='<div style="color:#66bb6a;font-size:10px">点击切换车头方向 ('+(flipped?'朝右':'朝左')+')</div>';
+        }
+      }
+      tooltip.innerHTML=html;
+      document.body.style.cursor='pointer';
+      return;
+    }
+  }
+  tooltip.style.display='none';
+  document.body.style.cursor='default';
+}
+renderer.domElement.addEventListener('mousemove',onMM);
+
+renderer.domElement.addEventListener('click',function(e){
+  mouse.x=(e.clientX/window.innerWidth)*2-1;
+  mouse.y=-(e.clientY/window.innerHeight)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(iMeshes,true);
+  if(hits.length>0){
+    let obj=hits[0].object;
+    while(obj&&!obj.userData.zData&&!obj.userData.carId)obj=obj.parent;
+    if(obj&&obj.userData.carId){
+      const ct=obj.userData.carType;
+      if(ct===1||ct===8){
+        toggleCarDirection(obj.userData.carId);
+        return;
+      }
+    }
+    if(obj&&obj.userData.zData){
+      showDetail(obj.userData.zData);
+      return;
+    }
+  }
+});
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDetail();});
+
+window.addEventListener('resize',function(){
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+(function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);})();
+</script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+{
+  "zones": [
+    {
+      "x": 16.26,
+      "z": -12.19,
+      "w": 24.32,
+      "d": 4.29,
+      "color": 3046706,
+      "label": "装备保障区",
+      "sub": ""
+    },
+    {
+      "x": 16.21,
+      "z": -8.31,
+      "w": 24.32,
+      "d": 3.48,
+      "color": 13915450,
+      "label": "部件检修区",
+      "sub": "清车 称重"
+    },
+    {
+      "x": 15.85,
+      "z": -0.19,
+      "w": 22.63,
+      "d": 3.75,
+      "color": 15245360,
+      "label": "缓车区",
+      "sub": ""
+    },
+    {
+      "x": 15.97,
+      "z": 4.39,
+      "w": 22.97,
+      "d": 4.02,
+      "color": 8077194,
+      "label": "轮对区",
+      "sub": ""
+    },
+    {
+      "x": 12.69,
+      "z": 7.88,
+      "w": 16.41,
+      "d": 2.95,
+      "color": 3829664,
+      "label": "转向架区",
+      "sub": ""
+    }
+  ],
+  "tracks": [
+    {
+      "id": "库8",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -15.0,
+      "color": 6045747
+    },
+    {
+      "id": "库7",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -13.5,
+      "color": 6045747
+    },
+    {
+      "id": "库6",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -12.0,
+      "color": 6045747
+    },
+    {
+      "id": "库5",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -10.5,
+      "color": 6045747
+    },
+    {
+      "id": "库4",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -9.0,
+      "color": 6045747
+    },
+    {
+      "id": "库3",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -7.5,
+      "color": 6045747
+    },
+    {
+      "id": "库2",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -6.0,
+      "color": 6045747
+    },
+    {
+      "id": "库1",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -4.5,
+      "color": 6045747
+    },
+    {
+      "id": "32",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -2.5,
+      "color": 6045747
+    },
+    {
+      "id": "31",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": -1.0,
+      "color": 6045747
+    },
+    {
+      "id": "30",
+      "label": "",
+      "type": "separated",
+      "maxCars": 3,
+      "z": 0.5,
+      "color": 6045747
+    },
+    {
+      "id": "29",
+      "label": "临修道",
+      "type": "complete",
+      "maxCars": 8,
+      "z": 3.0,
+      "color": 15684432
+    },
+    {
+      "id": "28",
+      "label": "无电调试道2",
+      "type": "complete",
+      "maxCars": 8,
+      "z": 4.5,
+      "color": 15245360
+    },
+    {
+      "id": "27",
+      "label": "无电调试道1",
+      "type": "complete",
+      "maxCars": 8,
+      "z": 6.0,
+      "color": 15245360
+    },
+    {
+      "id": "26",
+      "label": "有电调试道3",
+      "type": "complete",
+      "maxCars": 8,
+      "z": 7.5,
+      "color": 5025616
+    },
+    {
+      "id": "25",
+      "label": "有电调试道2",
+      "type": "complete",
+      "maxCars": 8,
+      "z": 9.0,
+      "color": 5025616
+    },
+    {
+      "id": "24",
+      "label": "有电调试道1",
+      "type": "complete",
+      "maxCars": 8,
+      "z": 10.5,
+      "color": 5025616
+    }
+  ],
+  "transferTable": {
+    "x": -3.0,
+    "z": -15.0,
+    "width": 4.0,
+    "depth": 31.5,
+    "label": "移车台"
+  },
+  "cranes": []
+}
