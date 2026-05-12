@@ -36,9 +36,6 @@ canvas{display:block}
 .train-item{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin:2px 0;background:rgba(22,27,34,0.6);border-radius:4px;font-size:10px}
 .train-item span{color:#8b949e}
 .del-btn{background:none;border:none;color:#f85149;cursor:pointer;font-size:13px;padding:0 4px}
-#legend{position:fixed;bottom:12px;right:12px;background:rgba(13,17,23,0.9);color:#8b949e;padding:10px 12px;border-radius:8px;font-size:10px;z-index:10;border:1px solid rgba(48,54,61,0.6)}
-.legend-item{display:flex;align-items:center;gap:5px;margin:2px 0}
-.legend-color{width:12px;height:8px;border-radius:2px;flex-shrink:0}
 #detailPanel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(13,17,23,0.97);color:#c9d1d9;padding:20px 24px;border-radius:12px;z-index:200;border:1px solid rgba(56,139,253,0.4);min-width:280px;max-width:400px;display:none;box-shadow:0 8px 32px rgba(0,0,0,0.6)}
 #detailPanel h4{color:#58a6ff;font-size:15px;margin-bottom:12px;border-bottom:1px solid rgba(48,54,61,0.6);padding-bottom:8px}
 #detailPanel .info-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(48,54,61,0.3)}
@@ -78,10 +75,17 @@ canvas{display:block}
     </details>
     <details class="panel-section" open>
       <summary>🚂 车辆管理</summary>
-      <div class="label" style="color:#58a6ff;font-size:10px;margin-bottom:4px">24-29道:左3节+右4节 | 点击1车/8车切换方向</div>
-      <div class="input-group"><input id="carId" placeholder="车号-节号(如201-1)"></div>
+      <div style="background:rgba(56,139,253,0.1);border:1px solid rgba(56,139,253,0.3);border-radius:6px;padding:8px;margin-bottom:8px">
+        <div class="label" style="color:#58a6ff;font-weight:bold;font-size:11px;margin-bottom:4px">24-28道 整列车停放</div>
+        <div class="input-group"><input id="trainNo" placeholder="列车号(如201)"></div>
+        <div class="input-group"><input id="trainCars" type="number" placeholder="编组数(如8)" min="1" max="16" value="8"></div>
+        <div class="input-group"><select id="trainTrack"><option value="">选择股道</option></select></div>
+        <button class="add-btn" onclick="addTrain()">停放整列车</button>
+      </div>
+      <div class="label" style="color:#8b949e;font-size:10px;margin-bottom:4px">其他股道单车管理 | 点击1车/8车切换方向</div>
+      <div class="input-group"><input id="carId" placeholder="车辆号"></div>
       <div class="input-group"><select id="carTrack"><option value="">选择股道</option></select></div>
-      <button class="add-btn" onclick="addCar()">添加车辆</button>
+      <button class="add-btn" onclick="addCar()">添加单辆车</button>
       <div id="trainList"></div>
     </details>
     <details class="panel-section">
@@ -102,16 +106,6 @@ canvas{display:block}
   <h4 id="detailTitle"></h4>
   <div id="detailContent"></div>
 </div>
-<div id="legend">
-  <div class="legend-item"><div class="legend-color" style="background:#4caf50"></div>有电调试道</div>
-  <div class="legend-item"><div class="legend-color" style="background:#e8a030"></div>无电调试道</div>
-  <div class="legend-item"><div class="legend-color" style="background:#ef5350"></div>临修工位</div>
-  <div class="legend-item"><div class="legend-color" style="background:#2e7d32"></div>绿色通道</div>
-  <div class="legend-item"><div class="legend-color" style="background:#5c4033"></div>起车道/存车线</div>
-  <div class="legend-item"><div class="legend-color" style="background:#00897b"></div>移车台</div>
-  <div class="legend-item"><div class="legend-color" style="background:#1565c0"></div>左侧工位区</div>
-  <div class="legend-item"><div class="legend-color" style="background:#c62828"></div>右侧工位区</div>
-</div>
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import*as THREE from'three';
@@ -127,11 +121,11 @@ function trackZ(idx,count){
 }
 
 const L_tracks=[
-  {id:"24",label:"有电调试道1",maxCars:3,idx:0,color:0x4caf50,side:'left'},
-  {id:"25",label:"有电调试道2",maxCars:3,idx:1,color:0x4caf50,side:'left'},
-  {id:"26",label:"有电调试道3",maxCars:3,idx:2,color:0x4caf50,side:'left'},
-  {id:"27",label:"无电调试道1",maxCars:3,idx:3,color:0xe8a030,side:'left'},
-  {id:"28",label:"无电调试道2",maxCars:3,idx:4,color:0xe8a030,side:'left'},
+  {id:"24",label:"有电调试道1",maxCars:8,idx:0,color:0xffffff,side:'left'},
+  {id:"25",label:"有电调试道2",maxCars:8,idx:1,color:0xffffff,side:'left'},
+  {id:"26",label:"有电调试道3",maxCars:8,idx:2,color:0xffffff,side:'left'},
+  {id:"27",label:"无电调试道1",maxCars:8,idx:3,color:0xffffff,side:'left'},
+  {id:"28",label:"无电调试道2",maxCars:8,idx:4,color:0xffffff,side:'left'},
   {id:"29",label:"临修道",maxCars:3,idx:5,color:0xef5350,side:'left'},
   {id:"30",label:"起车道",maxCars:3,idx:6,color:0x5c4033,side:'left'},
   {id:"31",label:"起车道",maxCars:3,idx:7,color:0x5c4033,side:'left'},
@@ -149,11 +143,11 @@ const L_tracks=[
 L_tracks.forEach(t=>{t.z=trackZ(t.idx,L_TRACK_COUNT);});
 
 const R_tracks=[
-  {id:"24",label:"有电调试道1",maxCars:4,idx:0,color:0x4caf50,side:'right'},
-  {id:"25",label:"有电调试道2",maxCars:4,idx:1,color:0x4caf50,side:'right'},
-  {id:"26",label:"有电调试道3",maxCars:4,idx:2,color:0x4caf50,side:'right'},
-  {id:"27",label:"无电调试道1",maxCars:4,idx:3,color:0xe8a030,side:'right'},
-  {id:"28",label:"无电调试道2",maxCars:4,idx:4,color:0xe8a030,side:'right'},
+  {id:"24",label:"有电调试道1",maxCars:4,idx:0,color:0xffffff,side:'right'},
+  {id:"25",label:"有电调试道2",maxCars:4,idx:1,color:0xffffff,side:'right'},
+  {id:"26",label:"有电调试道3",maxCars:4,idx:2,color:0xffffff,side:'right'},
+  {id:"27",label:"无电调试道1",maxCars:4,idx:3,color:0xffffff,side:'right'},
+  {id:"28",label:"无电调试道2",maxCars:4,idx:4,color:0xffffff,side:'right'},
   {id:"29",label:"绿色通道",maxCars:4,idx:5,color:0x2e7d32,side:'right'},
   {id:"转1",label:"转向架",maxCars:4,idx:6,color:0xc62828,side:'right'},
   {id:"转2",label:"转向架",maxCars:4,idx:7,color:0xc62828,side:'right'},
@@ -381,7 +375,8 @@ L_tracks.forEach(t=>{
   const isShared=L_sharedIds.includes(t.id);
   const tw=isShared?FW:LW;
   const cx=isShared?0:leftX;
-  const trackMat=new THREE.MeshStandardMaterial({color:t.color,roughness:0.7,transparent:true,opacity:0.15});
+  const trackOp=t.color===0xffffff?0.4:0.15;
+  const trackMat=new THREE.MeshStandardMaterial({color:t.color,roughness:0.7,transparent:true,opacity:trackOp});
   const zone=new THREE.Mesh(new THREE.BoxGeometry(tw,0.06,1.0),trackMat);
   zone.position.set(cx,0.03,t.z);
   tgL.add(zone);
@@ -402,7 +397,7 @@ L_tracks.forEach(t=>{
   }
 
   if(isShared){
-    const lc=t.color===0x4caf50?'#66bb6a':t.color===0xe8a030?'#ffcc66':'#8d6e63';
+    const lc=t.color===0xffffff?'#ffffff':t.color===0xef5350?'#ef5350':t.color===0x2e7d32?'#2e7d32':'#8d6e63';
     addLabel(tgL,t.id+'道 '+t.label,new THREE.Vector3(-FW/2+3,0.6,t.z),lc,7);
   }else{
     addLabel(tgL,t.id+'道 '+t.label,new THREE.Vector3(leftX-tw/2+2.5,0.6,t.z),'#8d6e63',7);
@@ -413,8 +408,15 @@ R_tracks.forEach(t=>{
   const isShared=L_sharedIds.includes(t.id);
   if(isShared){
     const labelText=t.id+'道 '+t.label;
-    const lc=t.color===0x4caf50?'#66bb6a':t.color===0xe8a030?'#ffcc66':'#ffcdd2';
+    const lc=t.color===0xffffff?'#ffffff':t.color===0x2e7d32?'#2e7d32':'#ffcdd2';
     addLabel(tgR,labelText,new THREE.Vector3(FW/2-3,0.6,t.z),lc,7);
+    if(t.id==='29'){
+      const greenMat=new THREE.MeshStandardMaterial({color:0x2e7d32,roughness:0.6,transparent:true,opacity:0.35});
+      const greenZone=new THREE.Mesh(new THREE.BoxGeometry(RW,0.06,1.0),greenMat);
+      greenZone.position.set(rightX,0.03,t.z);
+      tgR.add(greenZone);
+      addLabel(tgR,'绿色通道',new THREE.Vector3(rightX,0.8,t.z),'#66bb6a',8);
+    }
     return;
   }
 
@@ -439,7 +441,7 @@ R_tracks.forEach(t=>{
   }
 
   const labelText=t.id+'道 '+t.label;
-  const lc=t.color===0x4caf50?'#66bb6a':t.color===0xe8a030?'#ffcc66':'#ffcdd2';
+  const lc=t.color===0xffffff?'#ffffff':'#ffcdd2';
   if(t.label!=='吹扫间'&&t.label!=='油漆间'){
     addLabel(tgR,labelText,new THREE.Vector3(FW/2-3,0.6,t.z),lc,7);
   }
@@ -597,65 +599,38 @@ function rebuildAllCars(){
 
 function addCarToScene(car){
   const key=car.id;
-  if(carMap[key]){trainsG.remove(carMap[key]);delete carMap[key];}
+  if(carMap[key]){removeCarFromScene(key);}
 
-  const idParts=key.split('-');
-  const carType=parseInt(idParts[idParts.length-1])||1;
   const trackId=car.track;
   const isLeftTrack=L_trackMap[trackId]!==undefined;
-  const isRightTrack=R_trackMap[trackId]!==undefined;
+  if(!isLeftTrack)return;
 
-  if(!isLeftTrack&&!isRightTrack)return;
+  const zVal=L_trackMap[trackId];
+  const fullTrain=car.cars&&car.cars>0;
+  const carCount=fullTrain?car.cars:1;
+  const trainNo=car.trainNo||car.id;
+  const trainGroup=new THREE.Group();
 
-  const shared=L_sharedIds.includes(trackId);
-  const trainCar=mkTrainCar3D(Math.min(Math.max(carType,1),8));
-
-  if(shared){
-    const colIdx=carType;
-    let xPos;
-    if(colIdx<=3){
-      const localIdx=colIdx-1;
-      const spacing=1.6;
-      const startX=-(MW/2+LW/2)-0.5;
-      xPos=startX+localIdx*spacing;
-    }else{
-      const localIdx=colIdx-4;
-      const spacing=1.6;
-      const startX=(MW/2)+0.5;
-      xPos=startX+localIdx*spacing;
-    }
-    const zVal=isLeftTrack?L_trackMap[trackId]:(R_trackMap[trackId]||L_trackMap[trackId]);
-    trainCar.position.set(xPos,0.5,zVal);
-  }else if(isLeftTrack){
-    const leftCarsOnTrack=allCars.filter(c=>c.track===trackId&&L_trackMap[c.track]!==undefined);
-    const idx=leftCarsOnTrack.indexOf(car);
-    const spacing=1.6;
-    const startX=-(LW/2)+1.5;
-    const xPos=startX+idx*spacing;
-    trainCar.position.set(xPos,0.5,L_trackMap[trackId]);
-  }else{
-    const rightCarsOnTrack=allCars.filter(c=>c.track===trackId&&R_trackMap[c.track]!==undefined);
-    const idx=rightCarsOnTrack.indexOf(car);
-    const spacing=1.6;
-    const startX=rightX-(RW/2)+1.5;
-    const xPos=startX+idx*spacing;
-    trainCar.position.set(xPos,0.5,R_trackMap[trackId]);
+  for(let i=0;i<carCount;i++){
+    const carType=i+1;
+    const carModel=mkTrainCar3D(Math.min(Math.max(carType,1),8));
+    carModel.position.x=(i-(carCount-1)/2)*1.6;
+    trainGroup.add(carModel);
   }
 
-  if(carFlippedMap[key]&&(carType===1||carType===8)){
-    trainCar.rotation.y=Math.PI;
-  }
+  const startX=-(LW/2)+carCount*0.8;
+  trainGroup.position.set(startX,0.5,zVal);
 
-  const fullLabel=car.id+' -> '+trackId+'道';
-  trainCar.userData={type:'car',label:fullLabel,carId:key,carType:carType};
-  trainCar.traverse(child=>{
+  const label=fullTrain?(trainNo+'列车('+carCount+'节)'):(car.id);
+  trainGroup.userData={type:'car',label:label,carId:key};
+  trainGroup.traverse(child=>{
     if(child.isMesh){
-      child.userData={type:'car',label:fullLabel,carId:key,carType:carType};
+      child.userData={type:'car',label:label,carId:key,fullTrain:fullTrain};
       iMeshes.push(child);
     }
   });
-  trainsG.add(trainCar);
-  carMap[key]=trainCar;
+  trainsG.add(trainGroup);
+  carMap[key]=trainGroup;
 }
 
 function removeCarFromScene(id){
@@ -669,25 +644,24 @@ function removeCarFromScene(id){
 const defaultCars=[];
 const sharedTracks=["24","25","26","27","28","29"];
 const leftAbove=["30","31","32","库1","库2","库3","库4","库5","库6","库7","库8"];
-const rightAbove=["转1","转2","轮对","缓1","缓2","延1","延2","吹扫","油漆"];
 
-sharedTracks.forEach(tid=>{
-  for(let s=1;s<=7;s++){
-    defaultCars.push({id:''+tid+'_'+s+'-'+s,track:tid});
+sharedTracks.forEach((tid,idx)=>{
+  if(idx<5){
+    const trainNo=201+idx;
+    defaultCars.push({id:'T'+trainNo,track:tid,trainNo:''+trainNo,cars:8});
+  }else{
+    for(let s=1;s<=3;s++){
+      defaultCars.push({id:''+tid+'_'+s,track:tid});
+    }
   }
 });
 leftAbove.forEach(tid=>{
   for(let s=1;s<=3;s++){
-    defaultCars.push({id:'L'+tid+'_'+s+'-'+s,track:tid});
-  }
-});
-rightAbove.forEach(tid=>{
-  for(let s=1;s<=4;s++){
-    defaultCars.push({id:'R'+tid+'_'+s+'-'+s,track:tid});
+    defaultCars.push({id:''+tid+'_'+s,track:tid});
   }
 });
 
-let allCars=JSON.parse(localStorage.getItem('factory_cars_v5')||'null');
+let allCars=JSON.parse(localStorage.getItem('factory_cars_v7')||'null');
 if(!allCars||!allCars.length){allCars=defaultCars;}
 
 allCars.forEach(c=>addCarToScene(c));
@@ -705,14 +679,38 @@ allTrackOptions.forEach(t=>{
   trackSelect.appendChild(o);
 });
 
+const trainTrackSelect=document.getElementById('trainTrack');
+["24","25","26","27","28"].forEach(tid=>{
+  const t=L_tracks.find(tr=>tr.id===tid);
+  const o=document.createElement('option');
+  o.value=tid;
+  o.textContent=tid+'道 '+t.label;
+  trainTrackSelect.appendChild(o);
+});
+
+window.addTrain=function(){
+  const trainNo=document.getElementById('trainNo').value.trim();
+  const cars=parseInt(document.getElementById('trainCars').value)||8;
+  const track=document.getElementById('trainTrack').value;
+  if(!trainNo||!track){alert('请输入列车号并选择24-28道');return;}
+  const id='T'+trainNo;
+  const existing=allCars.findIndex(c=>c.id===id);
+  const car={id:id,track:track,trainNo:trainNo,cars:cars};
+  if(existing>=0)allCars[existing]=car;else allCars.push(car);
+  localStorage.setItem('factory_cars_v7',JSON.stringify(allCars));
+  rebuildAllCars();
+  renderCarList();
+  document.getElementById('trainNo').value='';
+};
+
 window.addCar=function(){
   const id=document.getElementById('carId').value.trim();
   const track=document.getElementById('carTrack').value;
-  if(!id||!track){alert('请输入车号-节号并选择股道');return;}
+  if(!id||!track){alert('请输入车辆号并选择股道');return;}
   const existing=allCars.findIndex(c=>c.id===id);
   const car={id:id,track:track};
   if(existing>=0)allCars[existing]=car;else allCars.push(car);
-  localStorage.setItem('factory_cars_v5',JSON.stringify(allCars));
+  localStorage.setItem('factory_cars_v7',JSON.stringify(allCars));
   rebuildAllCars();
   renderCarList();
   document.getElementById('carId').value='';
@@ -720,7 +718,7 @@ window.addCar=function(){
 
 window.removeCar=function(id){
   allCars=allCars.filter(c=>c.id!==id);
-  localStorage.setItem('factory_cars_v5',JSON.stringify(allCars));
+  localStorage.setItem('factory_cars_v7',JSON.stringify(allCars));
   removeCarFromScene(id);
   renderCarList();
 };
