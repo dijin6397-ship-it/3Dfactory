@@ -447,147 +447,37 @@ R_tracks.forEach(t=>{
   }
 });
 
-const carTextures={};
-const texLoader=new THREE.TextureLoader();
-for(let i=1;i<=8;i++){
-  const tex=texLoader.load('图片/'+i+'车.jpg');
-  tex.minFilter=THREE.LinearFilter;
-  tex.magFilter=THREE.LinearFilter;
-  carTextures[i]=tex;
-}
-
-const carColorPalette=[0x2196f3,0xe53935,0x43a047,0xfb8c00,0x8e24aa,0x00acc1,0xd81b60,0x00897b];
-const carFlippedMap={};
+const trainTexLoader=new THREE.TextureLoader();
+const trainModelTex=trainTexLoader.load('图片/列车模型_浅绿.png');
+trainModelTex.minFilter=THREE.LinearFilter;
+trainModelTex.magFilter=THREE.LinearFilter;
 
 const trainsG=ensureGroup('trains');
 const carMap={};
+const carFlippedMap={};
 
 function mkTrainCar3D(carType){
   const g=new THREE.Group();
-  const cw=1.6, ch=0.5, cd=0.5;
-  const carTex=carTextures[carType];
-  const accentColor=new THREE.Color(carColorPalette[(carType-1)%carColorPalette.length]);
+  const spriteMat=new THREE.SpriteMaterial({map:trainModelTex,transparent:true,depthWrite:false});
+  const sprite=new THREE.Sprite(spriteMat);
+  sprite.scale.set(1.6,1.8,1);
+  sprite.position.y=0.9;
+  sprite.userData.carType=carType;
+  g.add(sprite);
 
-  const bodyShape=new THREE.Shape();
-  const rr=0.06;
-  bodyShape.moveTo(-cw/2+rr,-cd/2);
-  bodyShape.lineTo(cw/2-rr,-cd/2);
-  bodyShape.quadraticCurveTo(cw/2,-cd/2,cw/2,-cd/2+rr);
-  bodyShape.lineTo(cw/2,cd/2-rr);
-  bodyShape.quadraticCurveTo(cw/2,cd/2,cw/2-rr,cd/2);
-  bodyShape.lineTo(-cw/2+rr,cd/2);
-  bodyShape.quadraticCurveTo(-cw/2,cd/2,-cw/2,cd/2-rr);
-  bodyShape.lineTo(-cw/2,-cd/2+rr);
-  bodyShape.quadraticCurveTo(-cw/2,-cd/2,-cw/2+rr,-cd/2);
+  g.userData.carType=carType;
+  g.userData.flipped=false;
 
-  const bodyGeo=new THREE.ExtrudeGeometry(bodyShape,{depth:ch,bevelEnabled:true,bevelThickness:0.02,bevelSize:0.02,bevelSegments:2});
-  bodyGeo.rotateX(-Math.PI/2);
-  bodyGeo.translate(0,ch/2,0);
-
-  const bodyMat=new THREE.MeshStandardMaterial({color:0xe8e8e8,roughness:0.3,metalness:0.15});
-  if(carTex){
-    bodyMat.map=carTex;
-    bodyMat.color=new THREE.Color(0xffffff);
-  }
-  const body=new THREE.Mesh(bodyGeo,bodyMat);
-  body.position.y=0.1;
-  body.castShadow=true;
-  body.receiveShadow=true;
-  g.add(body);
-
-  const stripe=new THREE.Mesh(
-    new THREE.BoxGeometry(cw-0.02,0.06,cd+0.02),
-    new THREE.MeshStandardMaterial({color:accentColor,roughness:0.35,metalness:0.3})
-  );
-  stripe.position.y=0.14;
-  g.add(stripe);
-
-  const roofGeo=new THREE.BoxGeometry(cw-0.1,0.05,cd-0.08);
-  const roof=new THREE.Mesh(roofGeo,new THREE.MeshStandardMaterial({color:0xbbbbbb,roughness:0.4,metalness:0.2}));
-  roof.position.y=ch+0.14;
-  g.add(roof);
-
-  const winMat=new THREE.MeshStandardMaterial({color:0x263238,roughness:0.15,metalness:0.6,transparent:true,opacity:0.85});
-  for(let s=-1;s<=1;s+=2){
-    for(let wi=-4;wi<=4;wi++){
-      const wx=wi*0.15;
-      if(Math.abs(wx)<0.25)continue;
-      const win=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.14,0.015),winMat);
-      win.position.set(wx,ch/2+0.14,s*(cd/2+0.008));
-      g.add(win);
-    }
-    const doorLeft=new THREE.Mesh(
-      new THREE.BoxGeometry(0.18,0.3,0.015),
-      new THREE.MeshStandardMaterial({color:0x90a4ae,roughness:0.25,metalness:0.4})
-    );
-    doorLeft.position.set(-0.5,ch/2+0.08,s*(cd/2+0.008));
-    g.add(doorLeft);
-    const doorRight=new THREE.Mesh(
-      new THREE.BoxGeometry(0.18,0.3,0.015),
-      new THREE.MeshStandardMaterial({color:0x90a4ae,roughness:0.25,metalness:0.4})
-    );
-    doorRight.position.set(0.5,ch/2+0.08,s*(cd/2+0.008));
-    g.add(doorRight);
-  }
-
-  const bogieMat=new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:0.25,metalness:0.75});
-  for(let bi=-1;bi<=1;bi+=2){
-    const bogie=new THREE.Group();
-    const frame=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.035,0.35),bogieMat);
-    bogie.add(frame);
-    const crossBeam=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.025,0.04),bogieMat);
-    crossBeam.position.y=-0.01;
-    bogie.add(crossBeam);
-    for(let ws=-1;ws<=1;ws+=2){
-      const axle=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.06,12),bogieMat);
-      axle.rotation.z=Math.PI/2;
-      axle.position.set(-0.1,0,ws*0.13);
-      bogie.add(axle);
-      const axle2=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.06,12),bogieMat);
-      axle2.rotation.z=Math.PI/2;
-      axle2.position.set(0.1,0,ws*0.13);
-      bogie.add(axle2);
-      const wheelL=new THREE.Mesh(new THREE.CylinderGeometry(0.065,0.065,0.025,16),bogieMat);
-      wheelL.rotation.z=Math.PI/2;
-      wheelL.position.set(-0.1,0,ws*0.13+0.04);
-      bogie.add(wheelL);
-      const wheelR=new THREE.Mesh(new THREE.CylinderGeometry(0.065,0.065,0.025,16),bogieMat);
-      wheelR.rotation.z=Math.PI/2;
-      wheelR.position.set(0.1,0,ws*0.13-0.04);
-      bogie.add(wheelR);
-    }
-    bogie.position.set(bi*0.4,0.05,0);
-    g.add(bogie);
-  }
-
-  const coupleMat=new THREE.MeshStandardMaterial({color:0x555555,roughness:0.3,metalness:0.6});
-  for(let end=-1;end<=1;end+=2){
-    const coupleBase=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.14),coupleMat);
-    coupleBase.position.set(end*(cw/2+0.04),0.1,0);
-    g.add(coupleBase);
-    const coupleHead=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.08,0.06),coupleMat);
-    coupleHead.position.set(end*(cw/2+0.08),0.1,0);
-    g.add(coupleHead);
-  }
-
-  const headlightMat=new THREE.MeshStandardMaterial({color:0xfff176,emissive:0xfff176,emissiveIntensity:0.6,roughness:0.2});
-  const headlightL=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.05),headlightMat);
-  headlightL.position.set(-cw/2-0.01,0.18,0.15);
-  g.add(headlightL);
-  const headlightR=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.05),headlightMat);
-  headlightR.position.set(-cw/2-0.01,0.18,-0.15);
-  g.add(headlightR);
-
-  const taillightMat=new THREE.MeshStandardMaterial({color:0xff1744,emissive:0xff1744,emissiveIntensity:0.4,roughness:0.2});
-  const taillightL=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.05),taillightMat);
-  taillightL.position.set(cw/2+0.01,0.18,0.15);
-  g.add(taillightL);
-  const taillightR=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.03,0.05),taillightMat);
-  taillightR.position.set(cw/2+0.01,0.18,-0.15);
-  g.add(taillightR);
-
-  g.scale.set(0.9,0.9,0.9);
   return g;
+}
+
+function toggleCarDirection(carId){
+  const trainGroup=carMap[carId];
+  if(!trainGroup)return;
+  const flipped=!trainGroup.userData.flipped;
+  trainGroup.userData.flipped=flipped;
+  trainGroup.rotation.y=flipped?Math.PI:0;
+  carFlippedMap[carId]=flipped;
 }
 
 function rebuildAllCars(){
@@ -622,13 +512,20 @@ function addCarToScene(car){
   trainGroup.position.set(startX,0.5,zVal);
 
   const label=fullTrain?(trainNo+'列车('+carCount+'节)'):(car.id);
-  trainGroup.userData={type:'car',label:label,carId:key};
+  trainGroup.userData={type:'car',label:label,carId:key,fullTrain:fullTrain};
+
   trainGroup.traverse(child=>{
-    if(child.isMesh){
+    if(child.isMesh||child.isSprite){
       child.userData={type:'car',label:label,carId:key,fullTrain:fullTrain};
       iMeshes.push(child);
     }
   });
+
+  if(carFlippedMap[key]){
+    trainGroup.rotation.y=Math.PI;
+    trainGroup.userData.flipped=true;
+  }
+
   trainsG.add(trainGroup);
   carMap[key]=trainGroup;
 }
@@ -661,7 +558,7 @@ leftAbove.forEach(tid=>{
   }
 });
 
-let allCars=JSON.parse(localStorage.getItem('factory_cars_v7')||'null');
+let allCars=JSON.parse(localStorage.getItem('factory_cars_v8')||'null');
 if(!allCars||!allCars.length){allCars=defaultCars;}
 
 allCars.forEach(c=>addCarToScene(c));
@@ -697,7 +594,7 @@ window.addTrain=function(){
   const existing=allCars.findIndex(c=>c.id===id);
   const car={id:id,track:track,trainNo:trainNo,cars:cars};
   if(existing>=0)allCars[existing]=car;else allCars.push(car);
-  localStorage.setItem('factory_cars_v7',JSON.stringify(allCars));
+  localStorage.setItem('factory_cars_v8',JSON.stringify(allCars));
   rebuildAllCars();
   renderCarList();
   document.getElementById('trainNo').value='';
@@ -710,7 +607,7 @@ window.addCar=function(){
   const existing=allCars.findIndex(c=>c.id===id);
   const car={id:id,track:track};
   if(existing>=0)allCars[existing]=car;else allCars.push(car);
-  localStorage.setItem('factory_cars_v7',JSON.stringify(allCars));
+  localStorage.setItem('factory_cars_v8',JSON.stringify(allCars));
   rebuildAllCars();
   renderCarList();
   document.getElementById('carId').value='';
@@ -718,20 +615,10 @@ window.addCar=function(){
 
 window.removeCar=function(id){
   allCars=allCars.filter(c=>c.id!==id);
-  localStorage.setItem('factory_cars_v7',JSON.stringify(allCars));
+  localStorage.setItem('factory_cars_v8',JSON.stringify(allCars));
   removeCarFromScene(id);
   renderCarList();
 };
-
-function toggleCarDirection(carId){
-  carFlippedMap[carId]=!carFlippedMap[carId];
-  const trainCar=carMap[carId];
-  if(!trainCar)return;
-  const car=trainCar.userData.carType;
-  if(car===1||car===8){
-    trainCar.rotation.y=carFlippedMap[carId]?Math.PI:0;
-  }
-}
 
 function renderCarList(){
   const el=document.getElementById('trainList');
@@ -750,8 +637,8 @@ function renderCarList(){
     html+='<div style="font-size:10px;color:#58a6ff;margin:4px 0 2px">'+track+'道 ('+grouped[track].length+'节):</div>';
     grouped[track].forEach(c=>{
       const isFlip=carFlippedMap[c.id];
-      const dirIcon=(c.id.endsWith('-1')||c.id.endsWith('-8'))?'<button class="del-btn" style="color:#58a6ff" onclick="toggleCarDir(\''+c.id+'\')" title="切换方向">'+(isFlip?'⬅':'➡')+'</button>':'';
-      html+='<div class="train-item"><span>'+c.id+'</span>'+dirIcon+'<button class="del-btn" onclick="removeCar(\''+c.id+'\')">&#10005;</button></div>';
+      const dirIcon=(c.id.endsWith('_1')||c.id.endsWith('_8'))?'<button class="del-btn" style="color:#58a6ff" onclick="toggleCarDir(\''+c.id+'\')" title="切换方向">'+(isFlip?'⬅':'→')+'</button>':'';
+      html+='<div class="train-item"><span>'+c.id+'</span>'+dirIcon+'<button class="del-btn" onclick="removeCar(\''+c.id+'\')">✕</button></div>';
     });
   });
   el.innerHTML=html;
@@ -819,10 +706,17 @@ function onMM(e){
       let html='<div style="color:#58a6ff;font-weight:bold;margin-bottom:3px">'+obj.userData.label+'</div>';
       if(zD){html+='<div style="color:#8b949e;font-size:10px">点击查看详情</div>';}
       if(obj.userData.type==='car'){
-        const ct=obj.userData.carType;
-        if(ct===1||ct===8){
-          const flipped=carFlippedMap[obj.userData.carId];
-          html+='<div style="color:#66bb6a;font-size:10px">点击切换车头方向 ('+(flipped?'朝右':'朝左')+')</div>';
+        const carId=obj.userData.carId;
+        const trainGroup=carMap[carId];
+        if(trainGroup){
+          const firstCar=trainGroup.children[0];
+          if(firstCar&&firstCar.userData.carType){
+            const ct=firstCar.userData.carType;
+            if(ct===1||ct===8){
+              const flipped=trainGroup.userData.flipped;
+              html+='<div style="color:#66bb6a;font-size:10px">点击切换车头方向 ('+(flipped?'朝右':'朝左')+')</div>';
+            }
+          }
         }
       }
       tooltip.innerHTML=html;
@@ -842,12 +736,19 @@ renderer.domElement.addEventListener('click',function(e){
   const hits=raycaster.intersectObjects(iMeshes,true);
   if(hits.length>0){
     let obj=hits[0].object;
-    while(obj&&!obj.userData.zData&&!obj.userData.carId)obj=obj.parent;
+    while(obj&&!obj.userData.carId)obj=obj.parent;
     if(obj&&obj.userData.carId){
-      const ct=obj.userData.carType;
-      if(ct===1||ct===8){
-        toggleCarDirection(obj.userData.carId);
-        return;
+      const carId=obj.userData.carId;
+      const trainGroup=carMap[carId];
+      if(trainGroup){
+        const firstCar=trainGroup.children[0];
+        if(firstCar&&firstCar.userData.carType){
+          const ct=firstCar.userData.carType;
+          if(ct===1||ct===8){
+            toggleCarDirection(carId);
+            return;
+          }
+        }
       }
     }
     if(obj&&obj.userData.zData){
