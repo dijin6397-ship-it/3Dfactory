@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -44,9 +44,10 @@ canvas{display:block}
 #detailPanel .close-btn{position:absolute;top:8px;right:12px;background:none;border:none;color:#8b949e;cursor:pointer;font-size:18px}
 #detailPanel .close-btn:hover{color:#f85149}
 #overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:199;display:none}
-</style>
+#loadingOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(13,17,23,0.97);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.5s}#loadingOverlay.hidden{opacity:0;pointer-events:none}#loadingBar{width:320px;height:8px;background:rgba(48,54,61,0.6);border-radius:4px;overflow:hidden;margin-top:16px}#loadingBarFill{width:0%;height:100%;background:linear-gradient(90deg,#58a6ff,#79c0ff);border-radius:4px;transition:width 0.3s}#loadingText{color:#8b949e;font-size:14px;margin-top:12px}</style>
 </head>
 <body>
+<div id="loadingOverlay"><div style="color:#58a6ff;font-size:18px;font-weight:bold">Loading 3D models...</div><div id="loadingBar"><div id="loadingBarFill"></div></div><div id="loadingText">Initializing...</div></div>
 <div id="topBar">
   <span class="title">数字化工厂模型</span>
   <img class="logo" src="图片/logo.jpg" alt="logo">
@@ -110,6 +111,7 @@ canvas{display:block}
 <script type="module">
 import*as THREE from'three';
 import{OrbitControls}from'three/addons/controls/OrbitControls.js';
+import{GLTFLoader}from'three/addons/loaders/GLTFLoader.js';
 
 const LW=20,MW=4,RW=20,FW=LW+MW+RW;
 const TS=2.5;
@@ -206,7 +208,7 @@ const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.shadowMap.type=THREE.PCFShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.2;
 document.body.appendChild(renderer.domElement);
@@ -447,10 +449,20 @@ R_tracks.forEach(t=>{
   }
 });
 
-const trainTexLoader=new THREE.TextureLoader();
-const trainModelTex=trainTexLoader.load('图片/列车模型_浅绿.png');
-trainModelTex.minFilter=THREE.LinearFilter;
-trainModelTex.magFilter=THREE.LinearFilter;
+const gltfLoader=new GLTFLoader();
+let headModel=null, carriageModel=null;
+var loadBar=document.getElementById('loadingBarFill');
+var loadText=document.getElementById('loadingText');
+var loadProgress=0;
+function updateProgress(pct,msg){
+  loadProgress=Math.max(loadProgress,pct);
+  if(loadBar)loadBar.style.width=loadProgress+'%';
+  if(loadText)loadText.textContent=msg||'';
+}
+const modelPromises=[
+  gltfLoader.loadAsync('\u56fe\u7247/\u8f66\u5934.glb').then(gltf=>{headModel=gltf.scene;headModel.visible=true;}),
+  gltfLoader.loadAsync('\u56fe\u7247/\u8f66\u53a2.glb').then(gltf=>{carriageModel=gltf.scene;carriageModel.visible=true;})
+];
 
 const trainsG=ensureGroup('trains');
 const carMap={};
@@ -458,16 +470,64 @@ const carFlippedMap={};
 
 function mkTrainCar3D(carType){
   const g=new THREE.Group();
-  const spriteMat=new THREE.SpriteMaterial({map:trainModelTex,transparent:true,depthWrite:false});
-  const sprite=new THREE.Sprite(spriteMat);
-  sprite.scale.set(1.6,1.8,1);
-  sprite.position.y=0.9;
-  sprite.userData.carType=carType;
-  g.add(sprite);
-
+  const isHead=(carType===1||carType===8);
+  const src=isHead?headModel:carriageModel;
+  if(src){
+    const clone=src.clone(true);
+    clone.traverse(child=>{if(child.isMesh){child.castShadow=true;child.receiveShadow=true;}});
+    if(isHead){clone.rotation.y=Math.PI/2;}
+    const box=new THREE.Box3().setFromObject(clone);
+    const size=new THREE.Vector3();
+    box.getSize(size);
+    if(size.x>0&&size.y>0&&size.z>0){
+      const targetLen=isHead?1.8:1.6;
+      const targetH=1.4;
+      const targetW=1.2;
+      const sx=targetLen/size.x;
+      const sy=targetH/size.y;
+      const sz=targetW/size.z;
+      const s=Math.min(sx,sy,sz);
+      clone.scale.set(s,s,s);
+    }
+    const box2=new THREE.Box3().setFromObject(clone);
+    const center=new THREE.Vector3();
+    box2.getCenter(center);
+    const size2=new THREE.Vector3();
+    box2.getSize(size2);
+    clone.position.set(-center.x, size2.y/2-box2.min.y, -center.z);
+    g.add(clone);
+  }else{
+    const c=isHead?0x4CAF50:0x66BB6A;
+    const mesh=new THREE.Mesh(
+      new THREE.BoxGeometry(isHead?1.8:1.6,1.2,1.0),
+      new THREE.MeshStandardMaterial({color:c})
+    );
+    mesh.position.y=0.6;
+    g.add(mesh);
+  }
+  const numCanvas=document.createElement('canvas');
+  numCanvas.width=128;
+  numCanvas.height=128;
+  const ctx=numCanvas.getContext('2d');
+  ctx.clearRect(0,0,128,128);
+  ctx.fillStyle='rgba(255,255,255,0.92)';
+  ctx.beginPath();
+  ctx.arc(64,64,52,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='#1a1a2e';
+  ctx.font='bold 80px Microsoft YaHei,SimHei,sans-serif';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(''+carType,64,68);
+  const numTex=new THREE.CanvasTexture(numCanvas);
+  numTex.minFilter=THREE.LinearFilter;
+  const numMat=new THREE.SpriteMaterial({map:numTex,transparent:true,depthWrite:false,depthTest:false});
+  const numSprite=new THREE.Sprite(numMat);
+  numSprite.scale.set(0.35,0.35,1);
+  numSprite.position.y=1.6;
+  g.add(numSprite);
   g.userData.carType=carType;
   g.userData.flipped=false;
-
   return g;
 }
 
@@ -504,7 +564,7 @@ function addCarToScene(car){
   for(let i=0;i<carCount;i++){
     const carType=i+1;
     const carModel=mkTrainCar3D(Math.min(Math.max(carType,1),8));
-    carModel.position.x=(i-(carCount-1)/2)*1.6;
+    carModel.position.x=(i-(carCount-1)/2)*1.9;
     trainGroup.add(carModel);
   }
 
@@ -561,8 +621,18 @@ leftAbove.forEach(tid=>{
 let allCars=JSON.parse(localStorage.getItem('factory_cars_v8')||'null');
 if(!allCars||!allCars.length){allCars=defaultCars;}
 
-allCars.forEach(c=>addCarToScene(c));
-renderCarList();
+Promise.all(modelPromises).then(()=>{
+  allCars.forEach(c=>addCarToScene(c));
+  renderCarList();
+  var ov=document.getElementById('loadingOverlay');
+  if(ov){ov.classList.add('hidden');setTimeout(function(){ov.remove();},600);}
+}).catch(function(err){
+  console.error('Load error:',err);
+  allCars.forEach(c=>addCarToScene(c));
+  renderCarList();
+  var o2=document.getElementById('loadingOverlay');
+  if(o2){o2.classList.add('hidden');setTimeout(function(){o2.remove();},600);}
+});
 
 const trackSelect=document.getElementById('carTrack');
 const allTrackOptions=[...L_tracks,...R_tracks];
